@@ -1,0 +1,138 @@
+#!/usr/bin/env python
+
+#   wye
+#   tee, but produces graphs via matplotlib
+#   Copyright (C) 2021 Evan Berkowitz
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import signal
+terminate = False
+
+def signal_handling(signum,frame):
+    global terminate
+    terminate = True
+signal.signal(signal.SIGINT,signal_handling)
+#signal.signal(signal.SIGPIPE,signal_handling)
+
+import sys
+import numpy as np
+import argparse
+import matplotlib.pyplot as plt
+import fileinput
+from wye import Scatter, Histogram, MC, style
+
+artists = {
+        'scatter':      Scatter,
+        'scat':         Scatter,
+        'histogram':    Histogram,
+        'hist':         Histogram,
+        'MC':           MC,
+        'mc':           MC,
+        }
+
+parser = argparse.ArgumentParser(
+    allow_abbrev=False,
+    prog='wye',
+    epilog='''wye Copyright (C) 2021 Evan Berkowitz
+This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+    This is free software, and you are welcome to redistribute it under the GPLv3 or any later version.
+''')
+parser.add_argument('style', choices=artists.keys(), default='scatter')
+parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
+
+parser.add_argument('--update-frequency', type=int, default=100)
+parser.add_argument('--clear-frequency', type=int, default=0)
+parser.add_argument('--silence', default=False, action='store_true')
+parser.add_argument('--save',   type=str, nargs='?', default='')
+parser.add_argument('--no-show', default=False, action='store_true')
+
+args, unparsed = parser.parse_known_args()
+
+# no-op print:
+if args.silence:
+    def verbose(message, **kwargs):
+        pass
+else:
+    import os
+    def verbose(message, **kwargs):
+        # This construction is adapted from the python docs
+        # https://docs.python.org/3/library/signal.html#note-on-sigpipe
+        # Zero-clause BSD licensed https://opensource.org/licenses/0BSD
+        try:
+            print(message, **kwargs)
+        except BrokenPipeError:
+            # Python flushes standard streams on exit; redirect remaining output
+            # to devnull to avoid another BrokenPipeError at shutdown
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(devnull, sys.stdout.fileno())
+            sys.exit(1)  # Python exits with error code 1 on EPIPE
+
+if args.style == "MC":
+    fig, ax = plt.subplots(1,2, squeeze=True, sharey='row', gridspec_kw={'width_ratios': [3, 1], 'wspace': 0}, figsize=(12,6))
+    artist = MC(ax, unparsed)
+    fig.tight_layout()
+elif args.style in artists:
+    fig, ax = plt.subplots(1,1, squeeze=True)
+    artist = artists[args.style](ax, unparsed)
+else:
+    raise TypeError(f"Unknown plot {args.style}.")
+
+if not args.no_show:
+    plt.ion()
+    plt.show()
+
+clear  = 0
+update = 0
+for i,ln in enumerate(fileinput.input(args.files)):
+    if terminate or (not plt.fignum_exists(1)):
+        exit()
+    try:
+        verbose(ln, end="")#, flush=True)
+    except Exception as e:
+        exit()
+    
+    fields = np.array(ln.split())
+    
+    if args.clear_frequency:
+        clear = clear % args.clear_frequency
+        if clear == 0:
+            artist.clear_data()
+        clear += 1
+    
+    artist.update_data(i, fields)
+    
+    update += 1
+    update =  update % args.update_frequency
+    if update:
+        continue
+    
+    if args.no_show:
+        continue
+    
+    artist.update_figure()
+    plt.draw()
+    plt.pause(0.1)
+    
+artist.update_figure()
+
+if args.save:
+    plt.savefig(args.save)
+
+sys.stdin.close()
+sys.stdout.close()
+sys.stderr.close()
+
+while (not args.no_show) and (not terminate) and (plt.fignum_exists(1)):
+    plt.pause(1)
