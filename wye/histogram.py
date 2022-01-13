@@ -21,50 +21,52 @@ from itertools import cycle
 from wye.artist import Artist
 from wye.style import style
 
-_parser = argparse.ArgumentParser(allow_abbrev=False)
-_parser.add_argument('--bins', type=int, nargs='+', default=[21])
-_parser.add_argument('--alpha', type=float, default=None)
-_parser.add_argument('--normalize', default=False, action='store_true')
-_parser.add_argument('--orientation', type=str, default='vertical', help="vertical or horizontal")
-
-
 class Histogram(Artist):
+    def _register(subparsers, parents=[]):
+        parser = subparsers.add_parser('histogram', 
+            parents=parents,
+            description='''Properties get cycled together.
+
+''',
+            epilog='''wye Copyright (C) 2021 Evan Berkowitz.
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under the GPLv3 or any later version.
+''')
+        Histogram._parser_setup(parser)
+    
+    def _parser_setup(parser, setup_Artist=True):
+        if setup_Artist:
+            Artist._parser_setup(parser, 'field')
+        parser.add_argument('--bins', type=int, nargs='+', default=[21], help='Number of bins; Defaults to 21')
+        parser.add_argument('--normalize', default=False, action='store_true')
+        parser.add_argument('--orientation', type=str, choices=['vertical', 'horizontal'], default='vertical')
     
     def __init__(self, ax, args):
         super().__init__(ax, args, "field")
         
-        
-        args, unparsed = _parser.parse_known_args(args)
-        self.args = argparse.Namespace(**vars(self.args), **vars(args))
-
-        if args.alpha is None:
-            if len(self.data) == 1:
-                self.alpha=style['alpha'][0]
-            else:
-                self.alpha = 0.125 + 0.5**(len(self.data) - 1)
-        else:
-            self.alpha=self.args.alpha
-        
         self.hist= dict()
-        for field, linestyle, color, in zip(
+        for field, name, linestyle, color, alpha, in zip(
             self.data,
+            cycle(self.args.name),
             cycle(self.args.linestyle),
             cycle(self.args.color),
+            cycle(self.alpha),
             ):
-            self.hist[field]=ax.hist([0], linestyle=linestyle, label=field, color=color, alpha=self.alpha, orientation=self.args.orientation)
+            self.hist[field]=ax.hist([0], linestyle=linestyle, label=(name if name else field), color=color, alpha=alpha, orientation=self.args.orientation)
         
         self.ax.legend()
-
+    
     def update_figure(self, ):
-        for f, linestyle, color, bins in zip(
+        for f, linestyle, color, alpha, bins in zip(
             self.data,
             cycle(self.args.linestyle),
             cycle(self.args.color),
-            cycle(self.args.bins)
+            cycle(self.alpha),
+            cycle(self.args.bins),
             ):
             _, _, bars = self.hist[f]
             [b.remove() for b in bars]
-            self.hist[f]=self.ax.hist(self.data[f], bins=bins, linestyle=linestyle, label=f, color=color, alpha=self.alpha, density=self.args.normalize, orientation=self.args.orientation)
+            self.hist[f]=self.ax.hist(self.data[f], bins=bins, linestyle=linestyle, label=f, color=color, alpha=alpha, density=self.args.normalize, orientation=self.args.orientation)
         super().update_figure()
 
 

@@ -16,6 +16,7 @@
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+from matplotlib.scale import get_scale_names
 from wye.style import style
 
 class _Queue:
@@ -42,32 +43,45 @@ class _Queue:
     def __iter__(self):
         return self.data.__iter__()
 
-class Artist:
+        
 
-    def __init__(self, ax, args, data):
-        self.ax = ax
+
+class Artist:
+    def _parser_setup(parser, data):
+        parser.add_argument(f'--{data}', type=int, nargs='+', default=[0], help="zero-indexed awk-style field index")
+        parser.add_argument(f'--name',   type=str, nargs='+', default=[''])
+        parser.add_argument('--color', type=str, nargs='+', default=style['colors'], help=f'Defaults to {style["colors"]}')
+        parser.add_argument('--alpha', type=float, nargs='+', default=style['alpha'], help=f'Truncated to between 0 and 1.  If {data} is one field, defaults to 1.  Otherwise defaults to 0.125 + 0.5**(number of {data} - 1)')
+        parser.add_argument('--linestyle', type=str, nargs='*', choices=['solid', 'dotted', 'dashed', 'dashdot'], default=[style['linestyle']])
         
-        parser = argparse.ArgumentParser(allow_abbrev=False)
-        
-        parser.add_argument(f'--{data}', type=int, nargs='+', default=[0])
-        parser.add_argument('--color', type=str, nargs='+', default=style['colors'])
-        parser.add_argument('--linestyle', type=str, nargs='*', default=[style['linestyle']])
-        
-        parser.add_argument('--xscale', default='linear')
-        parser.add_argument('--yscale', default='linear')
+        parser.add_argument('--xscale', choices=['linear'] + [s for s in  get_scale_names() if 'function' not in s and s != 'linear'], default='linear')
+        parser.add_argument('--yscale', choices=['linear'] + [s for s in  get_scale_names() if 'function' not in s and s != 'linear'], default='linear')
         
         parser.add_argument('--xlabel', type=str, default='')
         parser.add_argument('--ylabel', type=str, default='')
         parser.add_argument('--title', type=str, default='')
         
         parser.add_argument('--hline', type=float, nargs='*', default=[])
-        parser.add_argument('--hspan', type=float, nargs=2)
+        parser.add_argument('--hspan', type=float, nargs=2, help="low high")
         parser.add_argument('--vline', type=float, nargs='*', default=[])
-        parser.add_argument('--vspan', type=float, nargs=2)
-
-        parser.add_argument('--last',  type=int, default=0)
+        parser.add_argument('--vspan', type=float, nargs=2, help="low high")
         
-        self.args, _ = parser.parse_known_args(args)
+        parser.add_argument('--last',  type=int, default=0, help="Only retain the LAST most recent rows.")
+
+    def _default_alpha(self):
+        if self.args.alpha == style['alpha']:
+            if len(self.data) == 1:
+                self.alpha=style['alpha']
+            else:
+                self.alpha = [0.125 + 0.5**(len(self.data) - 1)]
+        else:
+            self.alpha=self.args.alpha
+        self.alpha = [ 0 if a < 0 else a for a in self.alpha ]
+        self.alpha = [ 1 if a > 1 else a for a in self.alpha ]
+    
+    def __init__(self, ax, args, data):
+        self.ax = ax
+        self.args = args
         
         ax.set_xscale(self.args.xscale)
         ax.set_yscale(self.args.yscale)
@@ -85,6 +99,7 @@ class Artist:
             ax.axvspan(self.args.vspan[0], self.args.vspan[1], color='gray', alpha=0.25)
         
         self.data = {label: _Queue(self.args.last) for label in vars(self.args)[data]}
+        self._default_alpha()
     
     def update_data(self, i, fields):
         for f in self.data:

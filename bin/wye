@@ -34,30 +34,33 @@ from wye import Scatter, Histogram, MC, style
 
 artists = {
         'scatter':      Scatter,
-        'scat':         Scatter,
         'histogram':    Histogram,
-        'hist':         Histogram,
-        'MC':           MC,
         'mc':           MC,
         }
 
 parser = argparse.ArgumentParser(
     allow_abbrev=False,
     prog='wye',
-    epilog='''wye Copyright (C) 2021 Evan Berkowitz
+    description="wye behaves like tee, in that it is transparent in a POSIX pipeline.  However, rather than producing a copy of stdin, it produces a(n interactive or a saved) matplotlib figure.",
+    epilog='''
+wye Copyright (C) 2021 Evan Berkowitz
 This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
     This is free software, and you are welcome to redistribute it under the GPLv3 or any later version.
 ''')
-parser.add_argument('style', choices=artists.keys(), default='scatter')
+
+global_options = argparse.ArgumentParser(add_help=False)
+global_options.add_argument('--update-frequency', type=int, default=100)
+global_options.add_argument('--clear-frequency', type=int, default=0)
+global_options.add_argument('--silence', default=False, action='store_true')
+global_options.add_argument('--save',   type=str, nargs='?', default='')
+global_options.add_argument('--no-show', default=False, action='store_true')
+
+subparsers = parser.add_subparsers(dest='artist', help="See subcommand --help for details.")
+for artist in artists.values():
+    artist._register(subparsers, parents=[global_options])
 parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
 
-parser.add_argument('--update-frequency', type=int, default=100)
-parser.add_argument('--clear-frequency', type=int, default=0)
-parser.add_argument('--silence', default=False, action='store_true')
-parser.add_argument('--save',   type=str, nargs='?', default='')
-parser.add_argument('--no-show', default=False, action='store_true')
-
-args, unparsed = parser.parse_known_args()
+args = parser.parse_args()
 
 # no-op print:
 if args.silence:
@@ -78,13 +81,13 @@ else:
             os.dup2(devnull, sys.stdout.fileno())
             sys.exit(1)  # Python exits with error code 1 on EPIPE
 
-if args.style == "MC":
+if args.artist == "mc":
     fig, ax = plt.subplots(1,2, squeeze=True, sharey='row', gridspec_kw={'width_ratios': [3, 1], 'wspace': 0}, figsize=(12,6))
-    artist = MC(ax, unparsed)
+    artist = MC(ax, args)
     fig.tight_layout()
-elif args.style in artists:
+elif args.artist in artists:
     fig, ax = plt.subplots(1,1, squeeze=True)
-    artist = artists[args.style](ax, unparsed)
+    artist = artists[args.artist](ax, args)
 else:
     raise TypeError(f"Unknown plot {args.style}.")
 
@@ -98,7 +101,7 @@ for i,ln in enumerate(fileinput.input(args.files)):
     if terminate or (not plt.fignum_exists(1)):
         exit()
     try:
-        verbose(ln, end="")#, flush=True)
+        verbose(ln, end="")
     except Exception as e:
         exit()
     
@@ -122,7 +125,7 @@ for i,ln in enumerate(fileinput.input(args.files)):
     
     artist.update_figure()
     plt.draw()
-    plt.pause(0.1)
+    plt.pause(0.00001)
     
 artist.update_figure()
 

@@ -22,11 +22,34 @@ from wye.scatter import Scatter
 from wye.histogram import Histogram
 
 class MC:
-    
+    def _register(subparsers, parents=[]):
+        parser = subparsers.add_parser('mc', 
+            parents=parents,
+            description='''Properties get cycled together.
+
+''',
+            epilog='''wye Copyright (C) 2021 Evan Berkowitz.
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under the GPLv3 or any later version.
+''')
+        MC._parser_setup(parser)
+
+    def _parser_setup(parser):
+        Scatter._parser_setup(parser)
+        Histogram._parser_setup(parser, False)
+        
     def __init__(self, ax, args):
         
         self.scatter   = Scatter(ax[0], args)
-        self.histogram = Histogram(ax[1], args + ['--field'] + [str(f) for f in self.scatter.data] + ['--orientation', 'horizontal'])
+        
+        args.title=''
+        args.field = self.scatter.data.keys()
+        args.orientation = 'horizontal'
+        if args.normalize:
+            args.xlabel="probability"
+        else:
+            args.xlabel="#"
+        self.histogram = Histogram(ax[1], args)
         # Share the data!
         self.histogram.data = self.scatter.data
         
