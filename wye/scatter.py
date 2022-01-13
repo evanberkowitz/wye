@@ -37,13 +37,16 @@ This is free software, and you are welcome to redistribute it under the GPLv3 or
 
     def _parser_setup(parser):
         Artist._parser_setup(parser, 'y')
-        parser.add_argument('--x', type=int, nargs=1, default=None, help='Field to use the x-axis.  If unspecified, [0, 1, 2, ...]')
-        parser.add_argument('--marker', type=str, nargs="*", default=style['markers'], help=f'Defaults to {style["markers"]}')
+        parser.add_argument('--x', type=int, nargs=1, default=None, help='Field to use for the common x-axis.  If unspecified, [0, 1, 2, ...]')
+        parser.add_argument('--marker', type=str, nargs="*", default=style['markers'], help=f'Defaults to {style["markers"]}.  See https://matplotlib.org/stable/api/markers_api.html for a list of markers.')
         parser.add_argument('--markeredgecolor', type=str, nargs="*", default=['none'], help=f'Defaults to \'none\'')
         parser.add_argument('--markerfillstyle', choices=Line2D.fillStyles, default='full')
 
     def __init__(self, ax, args):
         super().__init__(ax, args, 'y')
+        
+        # Allow for the integer-indicated ticks and carets:
+        self.args.marker = [int(m) if m in "11023456789" else m for m in self.args.marker]
         
         self.x = _Queue(self.args.last)
         

@@ -43,17 +43,18 @@ parser = argparse.ArgumentParser(
     prog='wye',
     description="wye behaves like tee, in that it is transparent in a POSIX pipeline.  However, rather than producing a copy of stdin, it produces a(n interactive or a saved) matplotlib figure.",
     epilog='''
-wye Copyright (C) 2021 Evan Berkowitz
-This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
-    This is free software, and you are welcome to redistribute it under the GPLv3 or any later version.
+wye Copyright (C) 2021 Evan Berkowitz.
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it under the GPLv3 or any later version.
 ''')
 
 global_options = argparse.ArgumentParser(add_help=False)
-global_options.add_argument('--update-frequency', type=int, default=100)
-global_options.add_argument('--clear-frequency', type=int, default=0)
-global_options.add_argument('--silence', default=False, action='store_true')
-global_options.add_argument('--save',   type=str, nargs='?', default='')
-global_options.add_argument('--no-show', default=False, action='store_true')
+global_options.add_argument('--delimiter', type=str, help="Fields are split on DELIMITER.")
+global_options.add_argument('--update-frequency', type=int, default=100, help="Plot is updated after UPDATE_FREQUENCY lines have been parsed.")
+global_options.add_argument('--clear-frequency', type=int, default=0, help="Data is clearaed after CLEAR_FREQUENCY lines have been parsed.")
+global_options.add_argument('--silence', default=False, action='store_true', help="Do not print to stdout.")
+global_options.add_argument('--save',   type=str, nargs='?', default='', help="Save the figure as SAVE.  If no file extension is included, defaults to png.")
+global_options.add_argument('--no-show', default=False, action='store_true', help="Do not display the image.  If you don't also --save, then wye is a waste of time.")
 
 subparsers = parser.add_subparsers(dest='artist', help="See subcommand --help for details.")
 for artist in artists.values():
@@ -95,6 +96,13 @@ if not args.no_show:
     plt.ion()
     plt.show()
 
+if args.delimiter:
+    def split(line):
+        return np.array(line.split(args.delimiter))
+else:
+    def split(line):
+        return np.array(line.split())
+
 clear  = 0
 update = 0
 for i,ln in enumerate(fileinput.input(args.files)):
@@ -105,7 +113,7 @@ for i,ln in enumerate(fileinput.input(args.files)):
     except Exception as e:
         exit()
     
-    fields = np.array(ln.split())
+    fields = split(ln)
     
     if args.clear_frequency:
         clear = clear % args.clear_frequency

@@ -50,7 +50,7 @@ class Artist:
     def _parser_setup(parser, data):
         parser.add_argument(f'--{data}', type=int, nargs='+', default=[0], help="zero-indexed awk-style field index")
         parser.add_argument(f'--name',   type=str, nargs='+', default=[''])
-        parser.add_argument('--color', type=str, nargs='+', default=style['colors'], help=f'Defaults to {style["colors"]}')
+        parser.add_argument('--color', type=str, nargs='+', default=style['colors'], help=f'Defaults to {style["colors"]}.  See https://matplotlib.org/stable/gallery/color/named_colors.html for a list of named colors.')
         parser.add_argument('--alpha', type=float, nargs='+', default=style['alpha'], help=f'Truncated to between 0 and 1.  If {data} is one field, defaults to 1.  Otherwise defaults to 0.125 + 0.5**(number of {data} - 1)')
         parser.add_argument('--linestyle', type=str, nargs='*', choices=['solid', 'dotted', 'dashed', 'dashdot'], default=[style['linestyle']])
         
