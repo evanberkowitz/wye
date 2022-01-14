@@ -44,6 +44,9 @@ This is free software, and you are welcome to redistribute it under the GPLv3 or
     def __init__(self, ax, args):
         super().__init__(ax, args, "field")
         
+        if self.args.ylabel == '' and self.args.normalize:
+            self.ax.set_ylabel('PDF')
+        
         self.hist= dict()
         for field, name, linestyle, color, alpha, in zip(
             self.data,

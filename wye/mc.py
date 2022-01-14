@@ -43,6 +43,7 @@ This is free software, and you are welcome to redistribute it under the GPLv3 or
         self.scatter   = Scatter(ax[0], args)
         
         args.title=''
+        args.ylabel=''
         args.field = self.scatter.data.keys()
         args.orientation = 'horizontal'
         if args.normalize:
