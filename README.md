@@ -1,7 +1,7 @@
 # wye
 Tee but make graphs
 
-Sometimes it is useful to pipe data from one command-line utility to another.  [tee][`tee`] allows you to send data down a pipe but also save a copy to a file.  `wye`, also named after a plumbing fitting, acts like `tee` but creates a visualization of data.
+Sometimes it is useful to pipe data from one command-line utility to another.  [`tee`][tee] allows you to send data down a pipe but also save a copy to a file.  `wye`, also named after a plumbing fitting, acts like `tee` but creates a visualization of data.
 
 In other words, if you have a pipeline like `produce_data | process_data` you can do something like
 ```
@@ -9,7 +9,7 @@ In other words, if you have a pipeline like `produce_data | process_data` you ca
 ```
 to see a scatter plot of the produced data and a histogram of the processed data.
 
-By default the figures are opened as interactive [mpl][`matplotlib`] figures.  You can supprress the interactive figure with the `--no-show` option, in which case you probably also want the `--save <filename>` option.
+By default the figures are opened as interactive [`matplotlib`][mpl] figures.  You can supprress the interactive figure with the `--no-show` option, in which case you probably also want the `--save <filename>` option.
 
 Data is read line-by-line and split into fields according to the `--delimiter` (which defaults to whitespace).
 
